@@ -37,7 +37,7 @@ class TF_IDF:
         # calling transform() before fit() raises AttributeError
         pass
 
-    def _tokenize(self, documents: List[str]):
+    def _tokenize(self, text: str) -> List[str]:
         """
         Tokenizes the input text by converting it to lowercase and extracting words.
         
