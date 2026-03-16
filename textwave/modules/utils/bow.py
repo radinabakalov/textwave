@@ -2,8 +2,6 @@ import re
 from collections import Counter
 from typing import List
 
-from text_processing import process_text
-
 import numpy as np
 import nltk
 
