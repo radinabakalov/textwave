@@ -4,6 +4,11 @@ from typing import List
 
 import numpy as np
 import nltk
+from nltk.stem import WordNetLemmatizer
+
+nltk.download('stopwords', quiet=True)
+nltk.download('wordnet', quiet=True)
+nltk.download('omw-1.4', quiet=True)
 
 class BagOfWords:
     """
@@ -42,20 +47,24 @@ class BagOfWords:
         """
         try:
             stop_words = set(nltk.corpus.stopwords.words('english'))
-
         except LookupError:
-            # Fallback if nltk stopwords aren't downloaded
-            stop_words = {'i','me','my','we','our','you','your','he','him','his','she','her',
-                          'it','its','they','them','their','what','which','who','this','that',
-                          'these','those','am','is','are','was','were','be','been','have','has',
-                          'had','do','does','did','a','an','the','and','but','if','or','of',
-                          'at','by','for','with','to','from','in','out','on','off','over',
-                          'then','so','no','not','only','some','such','too','very','here','there',
-                          'all','both','each','few','more','most','other','same','than','s','t'}
+            stop_words = {
+                'i','me','my','myself','we','our','ours','ourselves','you','your','yours',
+                'he','him','his','she','her','hers','it','its','they','them','their',
+                'what','which','who','whom','this','that','these','those','am','is','are',
+                'was','were','be','been','being','have','has','had','do','does','did',
+                'a','an','the','and','but','if','or','because','as','of','at','by',
+                'for','with','about','into','through','to','from','in','out','on','off',
+                'over','under','again','further','then','once','so','no','not','only',
+                'same','than','too','very','s','t','can','will','just','now','here','there',
+                'all','both','each','few','more','most','other','some','such',
+            }
 
+        lemmatizer = WordNetLemmatizer()
         tokens = re.findall(r'\b\w+\b', text.lower())
-        # Filter stop words and single-character tokens 
-        return [t for t in tokens if t not in stop_words and len(t) > 1]
+        # Filter stop words, then lemmatize so e.g. 'jumps' and 'jump' merge into one vocab entry
+        filtered = [t for t in tokens if t not in stop_words]
+        return [lemmatizer.lemmatize(t) for t in filtered]
 
     def fit(self, documents: List[str]):
         """
@@ -74,13 +83,10 @@ class BagOfWords:
         vocab = set()
 
         for doc in documents:
-            tokens = self._tokenize(doc)
-            vocab.update(tokens)
+            vocab.update(self._tokenize(doc))
 
-        # Sort vocabulary
-        sorted_vocab = sorted(vocab)
-        self.vocabulary_ = {word: idx for idx, word in enumerate(sorted_vocab)}
-
+        # Sort
+        self.vocabulary_ = {word: idx for idx, word in enumerate(sorted(vocab))}
         return self
 
     def transform(self, document: str):
@@ -102,13 +108,10 @@ class BagOfWords:
         counts = Counter(tokens)
 
         vector = np.zeros(len(self.vocabulary_))
-
         for token, count in counts.items():
             if token in self.vocabulary_:
-                idx = self.vocabulary_[token]
-                vector[idx] = count
+                vector[self.vocabulary_[token]] = count
 
-        # L2 normalize so document length doesn't skew similarity comparisons
         norm = np.linalg.norm(vector)
         if norm > 0:
             vector = vector / norm

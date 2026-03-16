@@ -1,10 +1,15 @@
 import math
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from typing import List
 
-import nltk
 import numpy as np
+import nltk
+from nltk.stem import WordNetLemmatizer
+
+nltk.download('stopwords', quiet=True)
+nltk.download('wordnet', quiet=True)
+nltk.download('omw-1.4', quiet=True)
 
 nltk.download('stopwords', quiet=True)
 
@@ -61,18 +66,22 @@ class TF_IDF:
         try:
             stop_words = set(nltk.corpus.stopwords.words('english'))
         except LookupError:
-            # Fallback if nltk stopwords aren't downloaded
-            stop_words = {'i','me','my','we','our','you','your','he','him','his','she','her',
-                          'it','its','they','them','their','what','which','who','this','that',
-                          'these','those','am','is','are','was','were','be','been','have','has',
-                          'had','do','does','did','a','an','the','and','but','if','or','of',
-                          'at','by','for','with','to','from','in','out','on','off','over',
-                          'then','so','no','not','only','some','such','too','very','here','there',
-                          'all','both','each','few','more','most','other','same','than','s','t'}
+            stop_words = {
+                'i','me','my','myself','we','our','ours','ourselves','you','your','yours',
+                'he','him','his','she','her','hers','it','its','they','them','their',
+                'what','which','who','whom','this','that','these','those','am','is','are',
+                'was','were','be','been','being','have','has','had','do','does','did',
+                'a','an','the','and','but','if','or','because','as','of','at','by',
+                'for','with','about','into','through','to','from','in','out','on','off',
+                'over','under','again','further','then','once','so','no','not','only',
+                'same','than','too','very','s','t','can','will','just','now','here','there',
+                'all','both','each','few','more','most','other','some','such',
+            }
 
+        lemmatizer = WordNetLemmatizer()
         tokens = re.findall(r'\b\w+\b', text.lower())
-        # Filter stop words and single-character tokens
-        return [t for t in tokens if t not in stop_words and len(t) > 1]
+        filtered = [t for t in tokens if t not in stop_words]
+        return [lemmatizer.lemmatize(t) for t in filtered]
 
     def fit(self, document: str):
         """
@@ -103,25 +112,20 @@ class TF_IDF:
         documents = document
         n = len(documents)
 
-        # Collect all unique tokens across the corpus
         all_tokens = set()
         for doc in documents:
             all_tokens.update(self._tokenize(doc))
 
-        # Sort for consistent ordering, then assign each token an index
         self.vocabulary_ = {word: idx for idx, word in enumerate(sorted(all_tokens))}
 
-        # Count how many documents contain each token (document frequency)
+        # Count how many documents contain each token
         doc_freq = Counter()
         for doc in documents:
-            # Use a set so each token counts once per document, not once per occurrence
-            unique_tokens = set(self._tokenize(doc))
-            for token in unique_tokens:
+            for token in set(self._tokenize(doc)):
                 if token in self.vocabulary_:
                     doc_freq[token] += 1
 
-        # Store idf as a numpy array indexed by vocabulary position
-        # Formula: log(N / (df + 1)) + 1 -> the +1 smooths zero-frequency terms
+        # IDF = log(N / (df + 1)) + 1 -> the +1 smooths unseen terms
         idf_array = np.zeros(len(self.vocabulary_))
         for token, idx in self.vocabulary_.items():
             idf_array[idx] = math.log(n / (doc_freq[token] + 1)) + 1
@@ -129,7 +133,7 @@ class TF_IDF:
 
         return self
 
-    def transform(self, document):
+    def transform(self, document: str) -> np.ndarray:
         """
         Transforms a document into its TF-IDF representation.
         
@@ -150,20 +154,15 @@ class TF_IDF:
             >>> tfidf_vector = transformer.transform("The quick fox.")
         """
         tokens = self._tokenize(document)
-
-        # Only count tokens that are in the vocabulary
         in_vocab = [t for t in tokens if t in self.vocabulary_]
         total = len(in_vocab)
 
-        # Return zero vector
         if total == 0:
             return np.zeros(len(self.vocabulary_))
 
         counts = Counter(in_vocab)
         vector = np.zeros(len(self.vocabulary_))
-
         for token, count in counts.items():
-            # TF normalized by in-vocab token count
             tf = count / total
             idx = self.vocabulary_[token]
             vector[idx] = tf * self.idf_[idx]
