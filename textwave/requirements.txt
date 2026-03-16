@@ -3,7 +3,7 @@ torch
 transformers
 sentence_transformers
 pandas
-mistralai>=2.0.0
+mistralai==1.2.5
 faiss-cpu
 numpy
 nltk
