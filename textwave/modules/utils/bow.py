@@ -4,16 +4,8 @@ from typing import List
 
 from text_processing import process_text
 
-# TODO: You will need to implement: 
-#  - BagOfWords._tokenize()
-#  - BagOfWords.fit()
-#  - BagOfWords.transform()
-
-# NOTE: Efficiency is not the primary goal here; nevertheless, 
-#       using :class:`collections.Counter` is recommended. See 
-#       the following resources for more information: 
-#       - https://docs.python.org/3/library/collections.html
-#       - https://www.geeksforgeeks.org/python/counters-in-python-set-1/
+import numpy as np
+import nltk
 
 class BagOfWords:
     """
@@ -33,7 +25,9 @@ class BagOfWords:
             vocabulary_ (dict): A dictionary mapping each unique word found in the corpus
                                 to a unique index. This is constructed during the fit process.
         """
-        self.vocabulary_ = {}
+        # Intentionally not setting vocabulary here so that calling transform()
+        # before fit() raises AttributeError as expected
+        pass
 
     def _tokenize(self, text: str):
         """
@@ -48,7 +42,22 @@ class BagOfWords:
         Returns:
             list: A list of word tokens extracted from the text.
         """
-        pass
+        try:
+            stop_words = set(nltk.corpus.stopwords.words('english'))
+
+        except LookupError:
+            # Fallback if nltk stopwords aren't downloaded
+            stop_words = {'i','me','my','we','our','you','your','he','him','his','she','her',
+                          'it','its','they','them','their','what','which','who','this','that',
+                          'these','those','am','is','are','was','were','be','been','have','has',
+                          'had','do','does','did','a','an','the','and','but','if','or','of',
+                          'at','by','for','with','to','from','in','out','on','off','over',
+                          'then','so','no','not','only','some','such','too','very','here','there',
+                          'all','both','each','few','more','most','other','same','than','s','t'}
+
+        tokens = re.findall(r'\b\w+\b', text.lower())
+        # Filter stop words and single-character tokens 
+        return [t for t in tokens if t not in stop_words and len(t) > 1]
 
     def fit(self, documents: List[str]):
         """
@@ -64,8 +73,17 @@ class BagOfWords:
         Returns:
             Bag_of_Words: The fitted transformer instance with an updated vocabulary_ attribute.
         """
-        pass
-        # return self <-- Your method should end with this
+        vocab = set()
+
+        for doc in documents:
+            tokens = self._tokenize(doc)
+            vocab.update(tokens)
+
+        # Sort vocabulary
+        sorted_vocab = sorted(vocab)
+        self.vocabulary_ = {word: idx for idx, word in enumerate(sorted_vocab)}
+
+        return self
 
     def transform(self, document: str):
         """
@@ -82,7 +100,22 @@ class BagOfWords:
             numpy: A numpy array indexing each term (from the learned vocabulary) with its count in the document.
                   Only tokens present in the vocabulary are included.
         """
-        pass
+        tokens = self._tokenize(document)
+        counts = Counter(tokens)
+
+        vector = np.zeros(len(self.vocabulary_))
+
+        for token, count in counts.items():
+            if token in self.vocabulary_:
+                idx = self.vocabulary_[token]
+                vector[idx] = count
+
+        # L2 normalize so document length doesn't skew similarity comparisons
+        norm = np.linalg.norm(vector)
+        if norm > 0:
+            vector = vector / norm
+
+        return vector
 
 
 if __name__ == "__main__":

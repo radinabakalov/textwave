@@ -5,8 +5,6 @@ from typing import List
 from glob import glob
 import nltk
 
-# TODO: You will need to implement: 
-# - DocumentProcessing.fixed_length_chunking()
 
 class DocumentProcessing:
     """
@@ -107,11 +105,31 @@ class DocumentProcessing:
         Returns:
             list: A list of text chunks.
         """
+        text = self.__read_text_file(document_filename)
+        if not isinstance(text, str):
+            return [text]
+            
+        text = self.trim_white_space(text)
+        
+        if chunk_size <= 0:
+            return []
 
-        #########################################
-        # TODO: Implement fixed_length_chunking()
-        #########################################
-        pass
+        # Overlap must be strictly less than chunk_size, otherwise we never advance
+        if overlap_size >= chunk_size:
+            raise ValueError(
+                f"overlap_size ({overlap_size}) must be less than chunk_size ({chunk_size})."
+            )
+
+        step_size = chunk_size - overlap_size
+
+        chunks = []
+        for start in range(0, len(text), step_size):
+            chunk = text[start:start + chunk_size]
+            # Skip trailing chunks that are pure overlap and add no new content
+            if chunk and len(chunk) > overlap_size:
+                chunks.append(chunk)
+
+        return chunks
 
 
 if __name__ == "__main__":

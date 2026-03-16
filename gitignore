@@ -1,0 +1,21 @@
+# Datasets 
+textwave/storage/
+textwave/qa_resources/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# Model / embedding caches
+.cache/
+*.bin
+*.pt
+*.safetensors
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
