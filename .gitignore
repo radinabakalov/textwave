@@ -19,3 +19,9 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Analysis data files (too large)
+analysis/*.csv
+analysis/*.npy
+analysis/*.pkl
+analysis/__pycache__/
